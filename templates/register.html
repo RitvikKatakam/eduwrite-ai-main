@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}Register - Edu Write{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card register-card">
+        <div class="auth-header">
+            <span class="auth-icon">✨</span>
+            <h1>Join Edu Write</h1>
+            <p>Start your intelligent learning journey today</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-error">
+            <span class="alert-icon">⚠️</span>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" class="auth-form" onsubmit="validateForm(event)">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input 
+                    type="text" 
+                    id="username" 
+                    name="username" 
+                    required 
+                    class="form-input"
+                    placeholder="Choose a username"
+                    autofocus
+                    minlength="3"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="email" class="form-label">Email Address</label>
+                <input 
+                    type="email" 
+                    id="email" 
+                    name="email" 
+                    required 
+                    class="form-input"
+                    placeholder="your@email.com"
+                >
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">
+                    Password 
+                    <span class="password-requirement">(Minimum 6 characters)</span>
+                </label>
+                <input 
+                    type="password" 
+                    id="password" 
+                    name="password" 
+                    required 
+                    class="form-input"
+                    placeholder="Create a strong password"
+                    minlength="6"
+                    oninput="checkPasswordStrength()"
+                >
+                <div id="passwordFeedback" class="password-feedback"></div>
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-register">
+                Create Account
+                <span class="btn-icon">→</span>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Already have an account? <a href="{{ url_for('login') }}" class="auth-link">Sign in here</a></p>
+        </div>
+
+        <div class="benefits">
+            <h3>What you get:</h3>
+            <ul class="benefits-list">
+                <li>⚡ 5 Free Credits</li>
+                <li>🤖 AI-Powered Generation</li>
+                <li>📊 Usage Analytics</li>
+                <li>💾 Full History</li>
+            </ul>
+        </div>
+    </div>
+
+    <div class="auth-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+</div>
+
+<script>
+function validateForm(event) {
+    const password = document.getElementById('password').value;
+    
+    if (password.length < 6) {
+        event.preventDefault();
+        alert('Password must be at least 6 characters long');
+        return false;
+    }
+    return true;
+}
+
+function checkPasswordStrength() {
+    const password = document.getElementById('password').value;
+    const feedback = document.getElementById('passwordFeedback');
+    
+    if (password.length === 0) {
+        feedback.textContent = '';
+        feedback.className = 'password-feedback';
+        return;
+    }
+    
+    if (password.length < 6) {
+        feedback.textContent = `⚠️ ${6 - password.length} more characters needed`;
+        feedback.className = 'password-feedback feedback-weak';
+    } else if (password.length < 10) {
+        feedback.textContent = '✓ Password is valid';
+        feedback.className = 'password-feedback feedback-good';
+    } else {
+        feedback.textContent = '✓✓ Strong password!';
+        feedback.className = 'password-feedback feedback-strong';
+    }
+}
+</script>
+{% endblock %}

@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Edu Write - Smart Learning Platform{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    {% block extra_css %}{% endblock %}
+</head>
+
+<body>
+    {% if session.get('user_id') %}
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="nav-left">
+                <div class="logo">
+                    <img src="{{ url_for('static', filename='logo.jpeg') }}" alt="Edu Write" class="logo-img">
+                    <span class="logo-text">Edu Write</span>
+                    <span class="pro-badge">PRO</span>
+                </div>
+            </div>
+
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('home') }}"
+                        class="nav-link {% if request.endpoint == 'home' %}active{% endif %}">
+                        <span class="nav-icon">✨</span>
+                        <span class="nav-text">Generator</span>
+                    </a></li>
+                <li><a href="{{ url_for('history') }}"
+                        class="nav-link {% if request.endpoint == 'history' %}active{% endif %}">
+                        <span class="nav-icon">📚</span>
+                        <span class="nav-text">History</span>
+                    </a></li>
+
+                <li><a href="{{ url_for('login_history') }}"
+                        class="nav-link {% if request.endpoint == 'login_history' %}active{% endif %}">
+                        <span class="nav-icon">🔐</span>
+                        <span class="nav-text">Activity</span>
+                    </a></li>
+                <li><a href="{{ url_for('about') }}"
+                        class="nav-link {% if request.endpoint == 'about' %}active{% endif %}">
+                        <span class="nav-icon">ℹ️</span>
+                        <span class="nav-text">About</span>
+                    </a></li>
+            </ul>
+
+            <div class="nav-right">
+                <div class="user-profile">
+                    <div class="profile-avatar">{{ session.get('username')[0].upper() }}</div>
+                    <span class="username">{{ session.get('username') }}</span>
+                </div>
+                <a href="{{ url_for('logout') }}" class="nav-link logout-btn" title="Logout">
+                    <span>🚪</span>
+                    <span class="logout-text">Exit</span>
+                </a>
+            </div>
+        </div>
+    </nav>
+    {% endif %}
+
+    <main class="main-content {% block main_class %}{% endblock %}">
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="app-footer">
+        <div class="footer-content">
+            <p>Created by <span class="ai-badge">✨ AI Student</span></p>
+        </div>
+    </footer>
+
+    <script src="{{ url_for('static', filename='script.js') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+
+</html>

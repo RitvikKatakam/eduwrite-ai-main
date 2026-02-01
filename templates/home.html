@@ -1,0 +1,398 @@
+{% extends "base.html" %}
+
+{% block title %}Home - Edu Write{% endblock %}
+
+{% block main_class %}full-width-layout{% endblock %}
+
+{% block content %}
+<div class="home-container chat-layout-wrapper">
+    <!-- Sidebar -->
+    <aside class="chat-sidebar">
+        <div class="sidebar-header">
+            <button class="new-chat-btn" onclick="startNewChat()">
+                <span class="btn-icon">+</span>
+                <span class="btn-text">New Chat</span>
+            </button>
+        </div>
+
+        <div class="sidebar-content">
+            <div class="sidebar-section">
+                <h3 class="sidebar-title">Chat History</h3>
+                <div class="history-list" id="historyList">
+                    <p class="no-history">No chats yet</p>
+                </div>
+            </div>
+        </div>
+    </aside>
+
+    <!-- Main Chat Area -->
+    <div class="home-container chat-layout">
+        <!-- Chat Messages Area -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="chat-welcome">
+                <h1 class="welcome-title">Welcome, <span class="gradient-text">{{ user.username }}</span></h1>
+                <p class="welcome-subtitle">Ask anything to generate content with AI</p>
+            </div>
+
+            <!-- Messages will appear here -->
+            <div id="messagesContainer"></div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="chat-input-area">
+            <div class="chat-input-container">
+                <!-- Credits Display -->
+                <div class="credits-info-bar">
+                    <span class="credits-icon">⚡</span>
+                    <span class="credits-text">Credits: <strong>{{ user.credits }}</strong> remaining</span>
+                </div>
+
+                <!-- Input Section -->
+                <div class="chat-input-section">
+                    <div class="input-wrapper">
+                        <textarea id="topic" class="chat-input"
+                            placeholder="Ask anything... (Press Shift+Enter for new line)" rows="1"></textarea>
+                        <button id="generateBtn" class="send-btn" {% if user.credits <=0 %}disabled{% endif %}>
+                            <span class="send-icon">→</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Chat history storage - Load from backend
+        let chatHistory = [
+            {% for item in history %}
+        {
+            id: "chat-{{ item._id }}",
+                topic: {{ item.topic | tojson }},
+            timestamp: "{{ item.created_at.strftime('%Y-%m-%d %H:%M') if item.created_at else '' }}",
+                response: {{ item.response | default ('') | tojson }}
+        } {% if not loop.last %}, {% endif %}
+        {% endfor %}
+        ];
+
+        let currentChatId = null;
+        try {
+            currentChatId = sessionStorage.getItem('currentChatId');
+        } catch (e) {
+            console.error("Session storage access error:", e);
+        }
+
+        // Start new chat
+        function startNewChat() {
+            try {
+                sessionStorage.removeItem('chatHistory');
+                sessionStorage.removeItem('currentChatId');
+                sessionStorage.removeItem('chatStarted');
+            } catch (e) { }
+            location.reload();
+        }
+
+        // Add to history
+        function addToHistory(topic, response = '') {
+            const chatId = 'chat-' + Date.now();
+            const chatItem = {
+                id: chatId,
+                topic: topic.substring(0, 30) + (topic.length > 30 ? '...' : ''),
+                timestamp: new Date().toLocaleTimeString(),
+                response: response
+            };
+
+            chatHistory.unshift(chatItem);
+            try {
+                sessionStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                sessionStorage.setItem('currentChatId', chatId);
+            } catch (e) {
+                console.warn("Could not save to session storage:", e);
+            }
+
+            renderHistory();
+        }
+
+        // Render history list
+        function renderHistory() {
+            const historyList = document.getElementById('historyList');
+            if (!historyList) return;
+
+            if (chatHistory.length === 0) {
+                historyList.innerHTML = '<p class="no-history">No chats yet</p>';
+                return;
+            }
+
+            historyList.innerHTML = chatHistory.map(chat => `
+                <div class="history-item" onclick="loadHistoryItem('${chat.id}')">
+                    <span class="history-icon">💬</span>
+                    <span class="history-text">${escapeHtml(chat.topic)}</span>
+                </div>
+            `).join('');
+        }
+
+        // Load history item to main chat
+        function loadHistoryItem(chatId) {
+            const chat = chatHistory.find(c => c.id === chatId);
+            if (!chat) return;
+
+            // Hide welcome screen
+            const welcome = document.querySelector('.chat-welcome');
+            if (welcome) welcome.style.display = 'none';
+
+            // Clear current messages
+            const container = document.getElementById('messagesContainer');
+            if (container) {
+                container.innerHTML = '';
+                addMessage(chat.topic, 'user');
+                if (chat.response) {
+                    addMessage(chat.response, 'bot');
+                }
+            }
+
+            // Scroll
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) {
+                setTimeout(() => {
+                    chatMessages.scrollTop = chatMessages.scrollHeight;
+                }, 50);
+            }
+        }
+
+        // Legacy scroll function
+        function scrollToChat(chatId) {
+            loadHistoryItem(chatId);
+        }
+
+        // Auto-resize textarea
+        const textarea = document.getElementById('topic');
+        if (textarea) {
+            textarea.addEventListener('input', function () {
+                this.style.height = 'auto';
+                this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+            });
+
+            // Handle Enter to send, Shift+Enter for new line
+            textarea.addEventListener('keydown', function (e) {
+                if (e.key === 'Enter' && !e.shiftKey) {
+                    e.preventDefault();
+                    generateContent();
+                }
+            });
+        }
+
+        // Generate content function
+        function generateContent() {
+            const topicInput = document.getElementById('topic');
+            if (!topicInput) return;
+            const topic = topicInput.value.trim();
+
+            if (!topic) {
+                showToast('Please enter a topic');
+                return;
+            }
+
+            const btn = document.getElementById('generateBtn');
+            if (btn) {
+                btn.disabled = true;
+                btn.classList.add('loading');
+            }
+
+            // Hide welcome section
+            const welcome = document.querySelector('.chat-welcome');
+            if (welcome) {
+                welcome.style.display = 'none';
+            }
+
+            // Add to history on first message
+            let started = false;
+            try {
+                started = sessionStorage.getItem('chatStarted');
+            } catch (e) { }
+
+            if (!started) {
+                addToHistory(topic);
+                try {
+                    sessionStorage.setItem('chatStarted', 'true');
+                } catch (e) { }
+            }
+
+            // Add user message to chat
+            addMessage(topic, 'user');
+            topicInput.value = '';
+            if (textarea) textarea.style.height = 'auto';
+
+            // Scroll
+            const chatMessages = document.getElementById('chatMessages');
+            if (chatMessages) chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Show loading message
+            const loadingId = addMessage('Generating...', 'loading');
+
+            fetch('/api/generate', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    topic: topic,
+                    contentType: 'Explanation',
+                    level: 'Intermediate'
+                })
+            })
+                .then(res => res.json())
+                .then(data => {
+                    removeMessage(loadingId);
+                    if (data.error) {
+                        addMessage('Error: ' + data.error, 'error');
+                    } else {
+                        addMessage(data.content, 'bot');
+                        updateCredits(data.credits_left);
+
+                        // Update latest history item with response
+                        if (chatHistory.length > 0) {
+                            chatHistory[0].response = data.content;
+                            try {
+                                sessionStorage.setItem('chatHistory', JSON.stringify(chatHistory));
+                            } catch (e) { }
+                        }
+                    }
+
+                    if (chatMessages) {
+                        setTimeout(() => {
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }, 100);
+                    }
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('loading');
+                    }
+                })
+                .catch(err => {
+                    removeMessage(loadingId);
+                    addMessage('Failed to generate. Please check your connection.', 'error');
+                    console.error(err);
+
+                    if (chatMessages) {
+                        setTimeout(() => {
+                            chatMessages.scrollTop = chatMessages.scrollHeight;
+                        }, 100);
+                    }
+
+                    if (btn) {
+                        btn.disabled = false;
+                        btn.classList.remove('loading');
+                    }
+                });
+        }
+
+        // Add message to chat
+        function addMessage(content, type) {
+            const container = document.getElementById('messagesContainer');
+            if (!container) return null;
+
+            const messageId = 'msg-' + Date.now() + Math.random().toString(36).substr(2, 5);
+            const messageEl = document.createElement('div');
+            messageEl.id = messageId;
+            messageEl.className = 'chat-message ' + type;
+
+            if (type === 'bot') {
+                let parsedContent = content || '';
+                try {
+                    if (typeof marked !== 'undefined') {
+                        parsedContent = marked.parse(content || '');
+                    }
+                } catch (e) {
+                    console.error("Markdown parse error:", e);
+                }
+
+                messageEl.innerHTML = `
+                    <div class="message-content">
+                        <div class="bot-avatar">✨</div>
+                        <div class="message-text">${parsedContent}</div>
+                        <button class="copy-msg-btn" onclick="copyMessage('${messageId}')">📋</button>
+                    </div>
+                `;
+            } else if (type === 'user') {
+                messageEl.innerHTML = `
+                    <div class="message-content">
+                        <div class="message-text">${escapeHtml(content || '')}</div>
+                        <div class="user-avatar">👤</div>
+                    </div>
+                `;
+            } else if (type === 'loading') {
+                messageEl.innerHTML = `
+                    <div class="message-content">
+                        <div class="bot-avatar">✨</div>
+                        <div class="message-text loading-dots">
+                            <span></span><span></span><span></span>
+                        </div>
+                    </div>
+                `;
+            } else if (type === 'error') {
+                messageEl.innerHTML = `
+                    <div class="message-content error">
+                        <div class="bot-avatar">⚠️</div>
+                        <div class="message-text">${escapeHtml(content || '')}</div>
+                    </div>
+                `;
+            }
+
+            container.appendChild(messageEl);
+            container.scrollTop = container.scrollHeight;
+            return messageId;
+        }
+
+        function removeMessage(id) {
+            const el = document.getElementById(id);
+            if (el) el.remove();
+        }
+
+        function copyMessage(id) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const text = el.querySelector('.message-text').innerText;
+            navigator.clipboard.writeText(text).then(() => {
+                const btn = el.querySelector('.copy-msg-btn');
+                if (btn) {
+                    const orig = btn.textContent;
+                    btn.textContent = '✓';
+                    setTimeout(() => btn.textContent = orig, 2000);
+                }
+            });
+        }
+
+        function updateCredits(creditsLeft) {
+            const creditsInfo = document.querySelector('.credits-text strong');
+            if (creditsInfo) {
+                creditsInfo.textContent = creditsLeft;
+            }
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        function showToast(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast-notification';
+            toast.textContent = message;
+            document.body.appendChild(toast);
+            setTimeout(() => toast.classList.add('show'), 10);
+            setTimeout(() => {
+                toast.classList.remove('show');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        const generateBtn = document.getElementById('generateBtn');
+        if (generateBtn) {
+            generateBtn.addEventListener('click', generateContent);
+        }
+
+        // Render history on load
+        renderHistory();
+    </script>
+    {% endblock %}

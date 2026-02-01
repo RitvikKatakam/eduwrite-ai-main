@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}History - Edu Write{% endblock %}
+
+{% block content %}
+<div class="history-container">
+    <div class="history-header">
+        <h1>Generation History</h1>
+        <p>View all your previous content generations</p>
+    </div>
+
+    {% if usages %}
+    <div class="history-filters">
+        <input 
+            type="text" 
+            id="searchInput" 
+            class="search-box" 
+            placeholder="Search topics..."
+        >
+    </div>
+
+    <div class="history-list">
+        {% for usage in usages %}
+        <div class="history-item" data-topic="{{ usage.topic.lower() }}">
+            <div class="history-item-header">
+                <div class="history-item-meta">
+                    <h3 class="history-topic">{{ usage.topic }}</h3>
+                    <span class="history-date">{{ usage.created_at.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                </div>
+                <button class="btn-icon-only expand-btn" title="View details">
+                    ⬇️
+                </button>
+            </div>
+            <div class="history-item-content hidden">
+                <p class="history-response">{{ usage.response }}</p>
+                <div class="history-actions">
+                    <button class="btn btn-small btn-copy" data-content="{{ usage.response }}">
+                        📋 Copy
+                    </button>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <span class="empty-icon">📭</span>
+        <h2>No history yet</h2>
+        <p>Start generating content to build your history</p>
+        <a href="{{ url_for('home') }}" class="btn btn-primary">
+            Go to Generator
+        </a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Expand/Collapse history items
+document.querySelectorAll('.expand-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const content = this.closest('.history-item').querySelector('.history-item-content');
+        content.classList.toggle('hidden');
+        this.textContent = content.classList.contains('hidden') ? '⬇️' : '⬆️';
+    });
+});
+
+// Copy functionality
+document.querySelectorAll('.btn-copy').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const content = this.dataset.content;
+        navigator.clipboard.writeText(content).then(() => {
+            const originalText = this.textContent;
+            this.textContent = '✓ Copied';
+            setTimeout(() => this.textContent = originalText, 2000);
+        });
+    });
+});
+
+// Search functionality
+document.getElementById('searchInput').addEventListener('keyup', function() {
+    const searchTerm = this.value.toLowerCase();
+    document.querySelectorAll('.history-item').forEach(item => {
+        const topic = item.dataset.topic;
+        if (topic.includes(searchTerm)) {
+            item.style.display = '';
+        } else {
+            item.style.display = 'none';
+        }
+    });
+});
+</script>
+{% endblock %}

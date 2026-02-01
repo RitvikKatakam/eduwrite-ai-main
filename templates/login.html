@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Edu Write{% endblock %}
+
+{% block content %}
+<div class="auth-container">
+    <div class="auth-card login-card">
+        <div class="auth-header">
+            <span class="auth-icon">🔐</span>
+            <h1>Welcome Back</h1>
+            <p>Access your AI-powered content generation suite</p>
+        </div>
+
+        {% if error %}
+        <div class="alert alert-error">
+            <span class="alert-icon">⚠️</span>
+            {{ error }}
+        </div>
+        {% endif %}
+
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label for="username" class="form-label">Username</label>
+                <input type="text" id="username" name="username" required class="form-input"
+                    placeholder="Enter your username" autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password" class="form-label">Password</label>
+                <input type="password" id="password" name="password" required class="form-input"
+                    placeholder="Enter your password">
+            </div>
+
+            <button type="submit" class="btn btn-primary btn-login">
+                Sign In
+                <span class="btn-icon">→</span>
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <p>Don't have an account? <a href="{{ url_for('register') }}" class="auth-link">Create one now</a></p>
+            <p><a href="{{ url_for('about') }}" class="auth-link">Learn about Edu Write</a></p>
+        </div>
+
+
+    </div>
+
+    <div class="auth-background">
+        <div class="gradient-orb orb-1"></div>
+        <div class="gradient-orb orb-2"></div>
+        <div class="gradient-orb orb-3"></div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics - Edu Write{% endblock %}
+
+{% block content %}
+<div class="stats-container">
+    <div class="stats-header">
+        <h1>Analytics Dashboard</h1>
+        <p>Track your usage and performance metrics</p>
+    </div>
+
+    <div class="stats-grid">
+        <!-- Credits Card -->
+        <div class="stat-card-large">
+            <div class="stat-card-icon">⚡</div>
+            <div class="stat-card-content">
+                <span class="stat-card-label">Available Credits</span>
+                <span class="stat-card-value">{{ user.credits }}</span>
+                <span class="stat-card-subtext">Credits remaining</span>
+            </div>
+        </div>
+
+        <!-- Total Requests Card -->
+        <div class="stat-card-large">
+            <div class="stat-card-icon">📊</div>
+            <div class="stat-card-content">
+                <span class="stat-card-label">Total Generations</span>
+                <span class="stat-card-value">{{ total_requests }}</span>
+                <span class="stat-card-subtext">Content pieces generated</span>
+            </div>
+        </div>
+
+        <!-- Member Since Card -->
+        <div class="stat-card-large">
+            <div class="stat-card-icon">📅</div>
+            <div class="stat-card-content">
+                <span class="stat-card-label">Member Since</span>
+                <span class="stat-card-value">{{ (now - user.created_at).days }} days</span>
+                <span class="stat-card-subtext">{{ user.created_at.strftime('%b %d, %Y') }}</span>
+            </div>
+        </div>
+
+        <!-- Account Status Card -->
+        <div class="stat-card-large">
+            <div class="stat-card-icon">👤</div>
+            <div class="stat-card-content">
+                <span class="stat-card-label">Account Status</span>
+                <span class="stat-card-value">Active</span>
+                <span class="stat-card-subtext">@{{ user.username }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if user.is_admin %}
+    <div class="stats-grid" style="margin-top: 1.5rem;">
+        <div class="stat-card-large" style="border-color: var(--primary-color);">
+            <div class="stat-card-icon">👥</div>
+            <div class="stat-card-content">
+                <span class="stat-card-label">Admin Insight</span>
+                <span class="stat-card-value">{{ logged_in_count }}</span>
+                <span class="stat-card-subtext">Users logged in (Last 24h)</span>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Charts Section -->
+    <div class="charts-section">
+        <div class="chart-card">
+            <h3>Usage Distribution</h3>
+            <div class="chart-placeholder">
+                <div class="chart-bar">
+                    <div class="bar"
+                        style="height: {% if total_requests > 0 %}{{ (total_requests / 20) * 100 }}%{% else %}5{% endif %}">
+                    </div>
+                </div>
+                <p>{{ total_requests }} / 20 monthly limit</p>
+            </div>
+        </div>
+
+        <div class="chart-card">
+            <h3>Credit Efficiency</h3>
+            <div class="efficiency-meter">
+                <div class="meter-bar" style="width: {{ (user.credits / 10) * 100 }}%"></div>
+            </div>
+            <p class="meter-text">{{ user.credits }} credits available</p>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+        <a href="{{ url_for('home') }}" class="btn btn-primary">
+            ✨ Generate More Content
+        </a>
+        <a href="{{ url_for('history') }}" class="btn btn-secondary">
+            📜 View History
+        </a>
+    </div>
+</div>
+
+<script>
+    // Make current date available to Jinja
+    document.body.dataset.currentDate = new Date().toISOString();
+</script>
+{% endblock %}

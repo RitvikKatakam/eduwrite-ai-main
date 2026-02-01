@@ -1,0 +1,158 @@
+{% extends "base.html" %}
+
+{% block title %}Login History - Edu Write{% endblock %}
+
+{% block content %}
+<div class="home-container">
+    <!-- Welcome Header -->
+    <div class="welcome-section">
+        <div class="welcome-content">
+            <h1 class="welcome-title">Login History</h1>
+            <p class="welcome-subtitle">Track your account sign-in activity</p>
+        </div>
+        <div class="credits-card">
+            <div class="credits-content">
+                <span class="credits-label">Total Logins</span>
+                <div class="credits-display">
+                    <span class="credits-value">{{ logins|length }}</span>
+                </div>
+                <span class="credits-info">Account access records</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Login History Section -->
+    <div class="generator-section">
+        <div class="generator-card">
+            <div class="generator-header">
+                <h2>Your Recent Sign-ins</h2>
+                <p>Monitor when and where you access your account</p>
+            </div>
+
+            {% if logins %}
+            <div class="login-history-list">
+                {% for login in logins %}
+                <div class="login-item">
+                    <div class="login-info">
+                        <div class="login-header">
+                            <span class="login-icon">🔐</span>
+                            <div class="login-details">
+                                <span class="login-time">{{ login.login_time.strftime('%B %d, %Y at %I:%M %p') }}</span>
+                                <span class="login-ip">IP: <code>{{ login.ip_address }}</code></span>
+                            </div>
+                        </div>
+                        <div class="login-meta">
+                            <span class="meta-label">Browser/Device:</span>
+                            <span class="meta-value">{{ login.user_agent[:60] }}...</span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <div class="empty-state">
+                <span class="empty-icon">📭</span>
+                <p>No login records found</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<style>
+.login-history-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.login-item {
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(0, 212, 255, 0.2);
+    border-radius: 0.75rem;
+    padding: 1.25rem;
+    transition: all 0.3s ease;
+}
+
+.login-item:hover {
+    border-color: rgba(0, 212, 255, 0.5);
+    background: rgba(255, 255, 255, 0.06);
+    box-shadow: 0 0 20px rgba(0, 212, 255, 0.1);
+}
+
+.login-info {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.login-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.login-icon {
+    font-size: 1.5rem;
+    margin-top: 0.25rem;
+}
+
+.login-details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.login-time {
+    color: var(--text-primary);
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.login-ip {
+    color: var(--text-secondary);
+    font-size: 0.9rem;
+}
+
+.login-ip code {
+    background: rgba(0, 212, 255, 0.1);
+    color: var(--primary-color);
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.35rem;
+    font-family: 'Courier New', monospace;
+    font-size: 0.85rem;
+}
+
+.login-meta {
+    display: flex;
+    gap: 0.75rem;
+    padding: 0.75rem;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.meta-label {
+    color: var(--text-secondary);
+    font-weight: 600;
+}
+
+.meta-value {
+    color: var(--text-primary);
+    word-break: break-all;
+    font-size: 0.8rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--text-secondary);
+}
+
+.empty-icon {
+    display: block;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+</style>
+{% endblock %}
