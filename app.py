@@ -32,8 +32,7 @@ try:
     from langchain_groq import ChatGroq
     from langchain_core.messages import HumanMessage, SystemMessage
     AI_AVAILABLE = True
-except ImportError as e:
-    print(f"❌ AI Import Error: {e}")
+except ImportError:
     AI_AVAILABLE = False
 
 def get_ai_client():
@@ -46,7 +45,7 @@ def get_ai_client():
             api_key=GROQ_API_KEY
         )
     except Exception as e:
-        print("AI Error (get_ai_client):", e)
+        print("AI Error:", e)
         return None
 
 # =============================
@@ -157,16 +156,6 @@ def login():
                 session["user_id"] = user.id
                 session["username"] = user.username
                 session.permanent = True
-                
-                # Record login activity
-                db.logins.insert_one({
-                    "user_id": user.id,
-                    "username": user.username,
-                    "login_time": datetime.utcnow(),
-                    "ip_address": request.remote_addr,
-                    "user_agent": request.headers.get("User-Agent")
-                })
-                
                 return redirect(url_for("home"))
         return render_template("login.html", error="Invalid credentials")
 
@@ -199,108 +188,89 @@ def home():
     history = list(db.usage.find({"user_id": user.id}).sort("created_at", -1))
     return render_template("home.html", user=user, history=history)
 
-@app.route("/history")
-@login_required
-def history():
-    user_id = session["user_id"]
-    usages = list(db.usage.find({"user_id": user_id}).sort("created_at", -1))
-    return render_template("history.html", usages=usages)
-
-@app.route("/login-history")
-@login_required
-def login_history():
-    user_id = session["user_id"]
-    logins = list(db.logins.find({"user_id": user_id}).sort("login_time", -1))
-    return render_template("login_history.html", logins=logins)
-
-@app.route("/about")
-def about():
-    return render_template("about.html")
-
 # =============================
-# AI GENERATION API (FIXED)
+# AI GENERATION API
 # =============================
 @app.route("/api/generate", methods=["POST"])
 @login_required
 def generate():
-    try:
-        data = request.get_json()
-        topic = data.get("topic", "").strip()
-        content_type = data.get("contentType", "Explanation").strip()
-        level = data.get("level", "Intermediate").strip()
+    data = request.get_json()
+    topic = data.get("topic", "").strip()
+    content_type = data.get("contentType", "Explanation").strip()
+    level = data.get("level", "Intermediate").strip()
 
-        if not topic:
-            print("❌ Missing topic")
-            return jsonify({"error": "Topic is required"}), 400
+    if not topic:
+        return jsonify({"error": "Topic required"}), 400
 
-        print(f"📩 Request for: {topic} | Type: {content_type} | Level: {level}")
+    user = User(db.users.find_one({"_id": ObjectId(session["user_id"])}))
 
-        user_data = db.users.find_one({"_id": ObjectId(session["user_id"])})
-        if not user_data:
-            return jsonify({"error": "User not found"}), 404
-        
-        user = User(user_data)
-        print(f"👤 User: {user.username} | Credits: {user.credits}")
+    # ---- SIMPLE GREETINGS (NO CREDIT USE) ----
+    clean_topic = topic.lower().strip().strip("?").strip("!")
 
-        if user.credits <= 0:
-            return jsonify({"error": "No credits left"}), 402
+    greetings = ["hi", "hello", "hey", "hi there", "hello there"]
+    how_are_you = ["how are you", "how r u", "how are u"]
+    who_are_you = ["who are you", "who r u", "who are u"]
 
-        # PRE-DEFINED GREETING RESPONSES
-        greetings = ["hi", "hello", "hey", "how are you", "hi there", "hello there", "good morning", "good afternoon", "good evening"]
-        clean_topic = topic.lower().strip().strip('?').strip('!')
-        
-        if clean_topic in greetings:
-            response = "Hi! I am EduWrite, your personal AI assistant. I am fine, how do you do? Is there anything interesting you would like to know?"
-            return jsonify({
-                "content": response,
-                "credits_left": user.credits
-            })
-
-        ai_client = get_ai_client()
-
-        if ai_client:
-            print("🤖 Calling AI...")
-            system_prompt = """
-You are EduWrite, an educational and technical AI assistant.
-You MUST follow the content structure exactly based on Content Type.
-Allowed types: Educational: Explanation, Summary, Quiz, Interactive Lesson, Mind Map; Technical: Coding, Research Paper.
-If the request is outside these, reply: "I am not aware of these questions."
-"""
-            user_prompt = f"Topic: {topic}\nContent Type: {content_type}\nLevel: {level}"
-
-            messages = [
-                SystemMessage(content=system_prompt),
-                HumanMessage(content=user_prompt)
-            ]
-
-            result = ai_client.invoke(messages)
-            response = result.content
-            print(f"✅ AI Response Received ({len(response)} chars)")
-        else:
-            print("⚠️ AI client configuration missing or failed")
-            response = "AI service not configured."
-
-        db.users.update_one(
-            {"_id": ObjectId(user.id)},
-            {"$inc": {"credits": -1}}
-        )
-
-        db.usage.insert_one({
-            "user_id": user.id,
-            "topic": topic,
-            "response": response,
-            "created_at": datetime.utcnow()
-        })
-
+    if clean_topic in greetings:
         return jsonify({
-            "content": response,
-            "credits_left": user.credits - 1
+            "content": "Hi! I am EduWrite AI. How can I help you today?",
+            "credits_left": user.credits
         })
-    except Exception as e:
-        print(f"🔥 Critical Generation Error: {e}")
-        import traceback
-        traceback.print_exc()
-        return jsonify({"error": str(e)}), 500
+
+    if clean_topic in how_are_you:
+        return jsonify({
+            "content": "I am fine, how do you do? Is there anything interesting you would like to know?",
+            "credits_left": user.credits
+        })
+
+    if clean_topic in who_are_you:
+        return jsonify({
+            "content": "I am EduWrite AI, your personal learning assistant. How can I help you today?",
+            "credits_left": user.credits
+        })
+
+    # ---- CREDIT CHECK ----
+    if user.credits <= 0:
+        return jsonify({"error": "No credits left"}), 402
+
+    ai_client = get_ai_client()
+
+    if ai_client:
+        system_prompt = """
+You are EduWrite AI.
+
+Allowed Content Types:
+Educational: Explanation, Summary, Quiz, Interactive Lesson, Mind Map
+Technical: Coding, Research Paper
+
+If the request does NOT fit these, reply only:
+"I am not aware of these questions."
+"""
+        messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=f"Topic: {topic}\nType: {content_type}\nLevel: {level}")
+        ]
+        response = ai_client.invoke(messages).content
+    else:
+        response = "AI service not configured."
+
+    # ---- UPDATE DB ----
+    db.users.update_one(
+        {"_id": ObjectId(user.id)},
+        {"$inc": {"credits": -1}}
+    )
+
+    db.usage.insert_one({
+        "user_id": user.id,
+        "topic": topic,
+        "response": response,
+        "created_at": datetime.utcnow()
+    })
+
+    return jsonify({
+        "content": response,
+        "credits_left": user.credits - 1
+    })
 
 @app.route("/logout")
 def logout():
@@ -311,5 +281,5 @@ def logout():
 # RUN
 # =============================
 if __name__ == "__main__":
-    print("🚀 EduWrite running on http://127.0.0.1:5001")
+    print("🚀 EduWrite running on port 5001")
     app.run(debug=True, port=5001, use_reloader=False)
