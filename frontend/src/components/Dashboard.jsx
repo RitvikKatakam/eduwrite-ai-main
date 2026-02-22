@@ -898,8 +898,11 @@ const Dashboard = ({ user, onLogout }) => {
                         <div className="about-container">
                             <div className="about-header">
                                 <h2 className="greeting-text">Hello, <span className="cyan-text">{user.name || user.email.split('@')[0]}!</span></h2>
-                                <h1>About <span className="cyan-text">Edu Write</span></h1>
-                                <p className="subtitle-brand">Groq AI</p>
+                                <h1 style={{ marginBottom: "0.5rem" }}>About <span className="cyan-text">Edu Write</span></h1>
+                                <p className="subtitle-brand" style={{ fontSize: "1.4rem", fontWeight: "600", color: "#fff", letterSpacing: "1px", marginBottom: "0.8rem" }}>
+                                    A Text Generation Based Application
+                                </p>
+                                <p className="subtitle-brand">Powered by Groq AI</p>
                                 <p className="tagline">Transforming Education with <span className="purple-text">Intelligent Content Generation</span></p>
                             </div>
                             <h2 className="section-title">Why Choose Edu Write?</h2>
