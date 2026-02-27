@@ -331,3 +331,22 @@ def get_specialized_prompt(content_type, academic_year="1st"):
     - Do not generate academic or technical content for greetings.
     - Do not expand beyond these responses. Keep it friendly, clean, and professional.
     """
+
+def apply_search_context(sys_prompt, search_context):
+    """
+    Augments the system prompt with search context and strict instructions.
+    """
+    if not search_context:
+        return sys_prompt
+    
+    return f"""{sys_prompt}
+
+CRITICAL: THE FOLLOWING SEARCH RESULTS ARE YOUR PRIMARY SOURCE OF TRUTH. 
+{search_context}
+
+RULES FOR SEARCH-AUGMENTED GENERATION:
+1. Generate the answer STRICTLY based on the retrieved content provided above.
+2. If the search data is insufficient, state exactly what information is missing.
+3. DO NOT hallucinate or use external knowledge not present in the search data.
+4. Cite the search results if appropriate.
+"""

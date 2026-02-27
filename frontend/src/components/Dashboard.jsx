@@ -355,7 +355,17 @@ const Dashboard = ({ user, onLogout }) => {
         } catch (error) {
             console.error('Generation error:', error);
             const errorData = error.response?.data;
-            let errorMsg = errorData?.error || "Failed to generate content. Please try again.";
+            let errorMsg = errorData?.error;
+
+            if (!errorMsg) {
+                if (error.code === 'ECONNABORTED' || error.message?.includes('timeout')) {
+                    errorMsg = "The request timed out. The server might be starting up or busy. Please try again in 30 seconds.";
+                } else if (!error.response) {
+                    errorMsg = "Connection lost. Please check your internet or ensure the backend is running.";
+                } else {
+                    errorMsg = "Failed to generate content. Please try again.";
+                }
+            }
 
             // Special handling for history full error
             if (errorData?.history_full) {

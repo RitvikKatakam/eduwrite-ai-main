@@ -16,3 +16,4 @@ gunicorn
 PyPDF2
 streamlit
 flask-caching
+tavily-python

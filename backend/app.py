@@ -15,7 +15,8 @@ from werkzeug.security import generate_password_hash, check_password_hash
 import PyPDF2
 from io import BytesIO
 
-from prompts_engine import get_specialized_prompt
+from prompts_engine import get_specialized_prompt, apply_search_context
+from search_service import search_service
 
 # =============================
 # CONFIG
@@ -255,6 +256,21 @@ def generate():
         from groq import Groq
         groq_client = Groq(api_key=GROQ_API_KEY)
         sys_prompt = get_specialized_prompt(content_type, academic_year)
+
+        # Web Search Integration
+        search_results = None
+        # Simple detection for when to search: If mode is 'deep' or content requires facts
+        # Or if the topic looks like a current event or factual query
+        search_triggers = ['who is', 'latest', 'current', 'news', 'price of', 'when is', 'what happened']
+        should_search = any(trigger in topic.lower() for trigger in search_triggers) or mode == 'deep'
+        
+        # Only search if TAVILY_API_KEY is present
+        if should_search and os.getenv("TAVILY_API_KEY"):
+            print(f"DEBUG: Search triggered for topic: {topic[:50]}...")
+            search_results = search_service.search(topic)
+            if search_results:
+                search_context = search_service.format_results_for_llm(search_results)
+                sys_prompt = apply_search_context(sys_prompt, search_context)
         
         # Inject mode instructions into system prompt
         if mode_instruction:

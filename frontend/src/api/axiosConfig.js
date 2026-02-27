@@ -5,7 +5,7 @@ const isLocalNetwork = hostname === 'localhost' || hostname === '127.0.0.1' || h
 
 const API_BASE = isLocalNetwork
   ? `http://${hostname}:5001`
-  : (import.meta.env.VITE_BACKEND_BASE_URL || 'https://eduwrite-ai-2yni.vercel.app'); // Use env or fallback to a known production URL
+  : (import.meta.env.VITE_BACKEND_BASE_URL || 'https://edu-write-ai--ismartgamer703.replit.app'); // Use env or fallback to your backend URL (NOT your Vercel frontend URL)
 
 const api = axios.create({
   baseURL: API_BASE,
